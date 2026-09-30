@@ -3,7 +3,8 @@ import fs from "fs";
 import util from "util";
 import db from "./db";
 import { sql } from "kysely";
-import ytdl from "@distube/ytdl-core";
+import { spawn } from "child_process";
+import { PassThrough, Readable } from "stream";
 import { Upload } from "@aws-sdk/lib-storage";
 import { S3 } from "@aws-sdk/client-s3";
 import crypto from "crypto";
@@ -60,6 +61,62 @@ const PROXY_USERNAME = process.env.PROXY_USERNAME;
 const PROXY_PASSWORD = process.env.PROXY_PASSWORD;
 const PROXY_COUNTRY = process.env.PROXY_COUNTRY;
 const PROXY_HOST = process.env.PROXY_HOST;
+
+const PROXY_URL = PROXY_HOST
+  ? `http://${PROXY_USERNAME}${
+      PROXY_COUNTRY ? `-cc-${PROXY_COUNTRY}` : ""
+    }:${PROXY_PASSWORD}@${PROXY_HOST}`
+  : undefined;
+
+// Stream the best audio-only format of a video through yt-dlp.
+// @distube/ytdl-core no longer finds playable formats on YouTube, so the
+// download goes through yt-dlp instead. The returned stream only ends after
+// yt-dlp exits successfully; a non-zero exit destroys it with yt-dlp's stderr,
+// so a failed download never completes the S3 upload.
+function ytDlpAudioStream(youtubeId: string): Readable {
+  const args = [
+    "--format",
+    "bestaudio[ext=webm]/bestaudio",
+    "--js-runtimes",
+    "node",
+    "--no-playlist",
+    "--no-progress",
+    "--quiet",
+    "--output",
+    "-",
+  ];
+  if (PROXY_URL) args.push("--proxy", PROXY_URL);
+  args.push("--", `https://www.youtube.com/watch?v=${youtubeId}`);
+
+  const child = spawn("yt-dlp", args, { stdio: ["ignore", "pipe", "pipe"] });
+  const out = new PassThrough();
+  let stderr = "";
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  child.stdout.pipe(out, { end: false });
+  child.on("error", (err) => out.destroy(err));
+  child.on("close", (code, signal) => {
+    if (code === 0) {
+      out.end();
+    } else {
+      out.destroy(
+        new Error(
+          `yt-dlp exited with ${signal ?? `code ${code}`}: ${stderr
+            .trim()
+            .slice(-500)}`
+        )
+      );
+    }
+  });
+  // Callers destroy the stream on timeouts; stop yt-dlp with it.
+  out.on("close", () => {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGKILL");
+    }
+  });
+  return out;
+}
 
 const accessKeyId = process.env.S3_ACCESS_KEY_ID;
 const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
@@ -230,31 +287,11 @@ async function workerLoop() {
           const abortController = new AbortController();
           let timeoutId: NodeJS.Timeout | undefined;
           try {
-            const ytdlAgent = PROXY_HOST
-              ? ytdl.createProxyAgent({
-                  uri: `http://${PROXY_USERNAME}${
-                    PROXY_COUNTRY ? `-cc-${PROXY_COUNTRY}` : ""
-                  }:${PROXY_PASSWORD}@${PROXY_HOST}`,
-                })
-              : undefined;
-            const info = await ytdl.getInfo(youtube_id, { agent: ytdlAgent });
-            const format = ytdl.chooseFormat(info.formats, {
-              quality: "highestaudio",
-              filter: "audioonly",
-            });
-            if (!format || !format.mimeType) {
-              throw new Error("No suitable audio format found");
-            }
             let chunkCountReceived = 0;
-            const { PassThrough } = await import("stream");
             const s3Key = `youtube-audio/${youtube_id}.webm`;
             // Await the upload promise so logs and DB update happen after upload completes
             const uploadPromise = new Promise((resolve, reject) => {
-              const stream = ytdl(youtube_id, {
-                quality: "highestaudio",
-                filter: "audioonly",
-                agent: ytdlAgent,
-              });
+              const stream = ytDlpAudioStream(youtube_id);
               let inactivityTimeout: NodeJS.Timeout | undefined;
               let startTimeout: NodeJS.Timeout | undefined;
               let receivedFirstData = false;

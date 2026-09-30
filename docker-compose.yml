@@ -40,7 +40,12 @@ services:
         window: 60s
 
   worker1:
-    image: skeptrune/jukebox-worker:v0.0.20
+    # Built locally: the upstream image downloads with @distube/ytdl-core, which
+    # no longer works against YouTube. This build uses yt-dlp instead.
+    image: jukebox-worker:local-ytdlp
+    build:
+      context: ./server
+      dockerfile: Dockerfile.youtube-worker
     ports:
       - "${WORKER1_PORT}:${WORKER1_INTERNAL_PORT}"
     env_file:
@@ -74,7 +79,12 @@ services:
       retries: 3
 
   worker2:
-    image: skeptrune/jukebox-worker:v0.0.20
+    # Built locally: the upstream image downloads with @distube/ytdl-core, which
+    # no longer works against YouTube. This build uses yt-dlp instead.
+    image: jukebox-worker:local-ytdlp
+    build:
+      context: ./server
+      dockerfile: Dockerfile.youtube-worker
     ports:
       - "${WORKER2_PORT}:${WORKER2_INTERNAL_PORT}"
     env_file:
@@ -108,7 +118,12 @@ services:
       retries: 3
 
   worker3:
-    image: skeptrune/jukebox-worker:v0.0.20
+    # Built locally: the upstream image downloads with @distube/ytdl-core, which
+    # no longer works against YouTube. This build uses yt-dlp instead.
+    image: jukebox-worker:local-ytdlp
+    build:
+      context: ./server
+      dockerfile: Dockerfile.youtube-worker
     ports:
       - "${WORKER3_PORT}:${WORKER3_INTERNAL_PORT}"
     env_file:
