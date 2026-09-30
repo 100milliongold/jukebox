@@ -163,6 +163,7 @@ services:
 
   frontend:
     image: skeptrune/jukebox-spa:v0.0.20
+    platform: linux/amd64
     env_file:
       - .env
     ports:
@@ -174,7 +175,7 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -188,7 +189,7 @@ services:
     restart: unless-stopped
 
   minio-init:
-    image: minio/mc:latest
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     depends_on:
       - minio
     environment:
