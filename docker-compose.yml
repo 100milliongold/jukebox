@@ -1,6 +1,11 @@
 services:
   server:
-    image: skeptrune/jukebox-server:v0.0.20
+    # Built locally: the upstream image inserts a new song among already
+    # played ones, which shifts the player onto a different song.
+    image: jukebox-server:local-queue-fix
+    build:
+      context: ./server
+      dockerfile: Dockerfile.server
     ports:
       - "${SERVER_PORT}:${SERVER_INTERNAL_PORT}"
     env_file:
