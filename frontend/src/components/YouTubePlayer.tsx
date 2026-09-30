@@ -115,10 +115,9 @@ export const YouTubePlayer = () => {
 
       if (currentSong?.id) {
         try {
-          await updateBoxSong(currentSong.id, {
-            ...currentSong,
-            status: "playing",
-          });
+          // Send only the status: the row's position may have changed since
+          // this song started, and a stale position would move it back.
+          await updateBoxSong(currentSong.id, { status: "playing" });
         } catch (error) {
           console.error("Failed to update song status to playing:", error);
         }
@@ -134,10 +133,9 @@ export const YouTubePlayer = () => {
 
       if (currentSong?.id) {
         try {
-          await updateBoxSong(currentSong.id, {
-            ...currentSong,
-            status: "played",
-          });
+          // Send only the status: the row's position may have changed since
+          // this song started, and a stale position would move it back.
+          await updateBoxSong(currentSong.id, { status: "played" });
         } catch (error) {
           console.error("Failed to update song status to played:", error);
         }
