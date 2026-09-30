@@ -49,7 +49,7 @@ export interface JukeboxContextValue {
     fingerprint?: string;
   }) => Promise<void>;
   currentSongIndex: number;
-  setCurrentSongIndex: Dispatch<SetStateAction<number>>;
+  setCurrentSongId: Dispatch<SetStateAction<string | null>>;
   /** Go to the previous song in the playlist */
   goToPrevious: () => void;
   /** Go to the next song in the playlist */
@@ -67,7 +67,13 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
   const [rows, setRows] = useState<SongRow[]>([]);
   const songs = usePlayerSongs(rows);
   const [loading, setLoading] = useState(true);
-  const [currentSongIndex, setCurrentSongIndex] = useState(-1);
+  // Track the current song by id, not by position in the list: dragging or
+  // inserting rows would otherwise move the player onto a different song.
+  const [currentSongId, setCurrentSongId] = useState<string | null>(null);
+  const currentSongIndex =
+    currentSongId === null
+      ? -1
+      : songs.findIndex((song) => song.id === currentSongId);
   const [page, setPage] = useState(0);
   const [fingerprint, setFingerprint] = useState<string | undefined>();
   const [user, setUser] = useState<User | undefined>();
@@ -163,18 +169,17 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
         });
       });
 
-      // set the current song index to the first playing song or the first queued song
-      let playingIndex = newSongRows.findIndex(
-        (row) => row.status === "playing" || row.status === "queued"
-      );
-      if (newSongRows.length && playingIndex === -1) {
-        playingIndex = 0;
-      }
-      if (playingIndex !== undefined && playingIndex !== -1) {
-        setCurrentSongIndex((prevIndex) =>
-          prevIndex === -1 && prevIndex !== playingIndex
-            ? playingIndex
-            : prevIndex
+      // Start from the first playing or queued song; keep the current song
+      // as long as it is still in the playlist.
+      const firstActive =
+        newSongRows.find(
+          (row) => row.status === "playing" || row.status === "queued"
+        ) ?? newSongRows[0];
+      if (firstActive) {
+        setCurrentSongId((prevId) =>
+          prevId && newSongRows.some((row) => row.id === prevId)
+            ? prevId
+            : firstActive.id
         );
       }
     } catch (error) {
@@ -363,10 +368,10 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
         console.error("Failed to update song status to played:", error);
       }
     }
-    setCurrentSongIndex((prevIndex) => {
-      const newIndex = prevIndex - 1;
-      return newIndex >= 0 ? newIndex : prevIndex;
-    });
+    const previousSong = songs[currentSongIndex - 1];
+    if (previousSong) {
+      setCurrentSongId(previousSong.id);
+    }
   }, [songs, currentSongIndex]);
 
   const goToNext = useCallback(() => {
@@ -380,10 +385,10 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
         console.error("Failed to update song status to played:", error);
       }
     }
-    setCurrentSongIndex((prevIndex) => {
-      const newIndex = prevIndex + 1;
-      return newIndex < songs.length ? newIndex : prevIndex;
-    });
+    const nextSong = songs[currentSongIndex + 1];
+    if (nextSong) {
+      setCurrentSongId(nextSong.id);
+    }
   }, [currentSongIndex, songs]);
 
   // Helper properties to check if navigation is available
@@ -404,7 +409,7 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
         setPage,
         addSong,
         currentSongIndex,
-        setCurrentSongIndex,
+        setCurrentSongId,
         goToPrevious,
         goToNext,
         hasPrevious,
