@@ -87,7 +87,9 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
     if (!boxSlug) return;
     setLoading(true);
     try {
-      const limit = 20; // You can make this configurable
+      // There is no paging UI, so load the whole playlist. Rows past the
+      // first page were never listed or played.
+      const limit = 1000;
       const offset = page * limit;
       const response = await getBoxSongs(box?.id ?? "", { limit, offset });
 
