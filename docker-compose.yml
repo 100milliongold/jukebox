@@ -162,8 +162,12 @@ services:
       retries: 3
 
   frontend:
-    image: skeptrune/jukebox-spa:v0.0.20
-    platform: linux/amd64
+    # Built locally: the upstream image tracks the current song by its index in
+    # the playlist, so reordering rows switches the player to another song.
+    image: jukebox-spa:local-player-fix
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     env_file:
       - .env
     ports:
