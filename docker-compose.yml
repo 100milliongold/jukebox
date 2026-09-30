@@ -169,6 +169,8 @@ services:
       - "${FRONTEND_PORT}:${FRONTEND_INTERNAL_PORT}"
     environment:
       VITE_API_HOST: ${VITE_API_HOST}
+    volumes:
+      - ./frontend-strip-plausible.sh:/docker-entrypoint.d/00-strip-plausible.sh:ro
     restart: unless-stopped
 
   minio:
