@@ -5,6 +5,8 @@ import { Play, Pause, SkipForward, SkipBack, Download } from "lucide-react";
 import { useJukebox } from "@/hooks/useJukeboxContext";
 import { updateBoxSong, getYouTubeAudioSignedUrl } from "@/sdk";
 import type { SongRow } from "@/lib/player";
+import { useEqualizer } from "@/hooks/useEqualizer";
+import EqualizerPanel from "@/components/EqualizerPanel";
 import { motion } from "framer-motion";
 
 export const YouTubePlayer = () => {
@@ -21,6 +23,8 @@ export const YouTubePlayer = () => {
   const autoplayAttemptedRef = useRef(false);
   const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastPolledIdRef = useRef<string | null>(null);
+  const equalizer = useEqualizer(audioRef);
+  const { attachIfInUse: attachEqualizer } = equalizer;
 
   useEffect(() => {
     if (currentSongIndex >= 0 && currentSongIndex < songs.length) {
@@ -198,13 +202,21 @@ export const YouTubePlayer = () => {
     } else {
       try {
         setHasInteracted(true);
+        // A click lets the browser start audio, so the equalizer can connect.
+        attachEqualizer();
         await audio.play();
         setIsPlaying(true);
       } catch (error) {
         console.error("Playback failed:", error);
       }
     }
-  }, [isPlaying]);
+  }, [isPlaying, attachEqualizer]);
+
+  // Apply a saved setting to a new song, and route a re-created <audio>
+  // element (no song -> song) through the equalizer as well.
+  useEffect(() => {
+    attachEqualizer();
+  }, [currentSong, attachEqualizer]);
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
@@ -438,6 +450,12 @@ export const YouTubePlayer = () => {
                   <div className="text-center text-sm text-gray-600 mt-4">
                     Playing {currentSongIndex + 1} of {songs.length}
                   </div>
+                  <EqualizerPanel
+                    gains={equalizer.gains}
+                    presetId={equalizer.presetId}
+                    onBandChange={equalizer.setBand}
+                    onPresetSelect={equalizer.applyPreset}
+                  />
                   {/* User interaction message */}
                   {!hasInteracted && !isPlaying && !isLoading && (
                     <motion.div
