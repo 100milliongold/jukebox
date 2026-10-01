@@ -14,6 +14,7 @@ import { S3 } from "@aws-sdk/client-s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import nodemailer from "nodemailer";
+import { createChartCache, fetchWeeklyChart } from "./youtube-charts";
 
 // S3 configuration from .env
 const accessKeyId = process.env.S3_ACCESS_KEY_ID;
@@ -1723,6 +1724,82 @@ app.get("/api/youtube/search", async (req, res, _next: NextFunction) => {
       console.error("Failed to send failure email:", emailErr);
     }
     res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// The weekly chart changes once a week, so one fetch an hour is plenty.
+const weeklyChartCache = createChartCache({
+  ttlMs: 60 * 60 * 1000,
+  load: () =>
+    fetchWeeklyChart({
+      fetchImpl: fetch,
+      country: "kr",
+      apiKey: process.env.YOUTUBE_API_KEY,
+    }),
+});
+
+/**
+ * @openapi
+ * /api/youtube/charts:
+ *   get:
+ *     tags:
+ *       - YouTube
+ *     summary: Weekly top songs in Korea, ranked by YouTube views
+ *     responses:
+ *       200:
+ *         description: Weekly chart from YouTube Charts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 country:
+ *                   type: string
+ *                 endDate:
+ *                   type: string
+ *                   nullable: true
+ *                   description: Last day of the charted week (YYYY-MM-DD)
+ *                 fetchedAt:
+ *                   type: string
+ *                 stale:
+ *                   type: boolean
+ *                   description: True when YouTube Charts failed and the last chart is served
+ *                 entries:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       rank:
+ *                         type: integer
+ *                       previousRank:
+ *                         type: integer
+ *                         nullable: true
+ *                       periodsOnChart:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       artist:
+ *                         type: string
+ *                       youtubeId:
+ *                         type: string
+ *                       viewCount:
+ *                         type: integer
+ *                       thumbnail:
+ *                         type: string
+ *                         nullable: true
+ *                       url:
+ *                         type: string
+ *                       duration:
+ *                         type: string
+ *       502:
+ *         description: YouTube Charts unavailable and nothing cached
+ */
+app.get("/api/youtube/charts", async (_req, res, _next: NextFunction) => {
+  try {
+    res.json(await weeklyChartCache.get());
+  } catch (error) {
+    console.error("YouTube Charts error:", error);
+    res.status(502).json({ error: (error as Error).message });
   }
 });
 

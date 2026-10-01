@@ -1,0 +1,156 @@
+{
+  "contents": {
+    "sectionListRenderer": {
+      "contents": [
+        {
+          "musicAnalyticsSectionRenderer": {
+            "content": {
+              "trackTypes": [
+                {
+                  "listType": "TOP_VIEWS_CHART",
+                  "chartPeriodType": "CHART_PERIOD_TYPE_WEEKLY",
+                  "endDate": "2026-09-24",
+                  "trackViews": [
+                    {
+                      "id": "G:GXljkR3NRV8",
+                      "name": "퇴사할게여",
+                      "viewCount": "6220220",
+                      "thumbnail": {
+                        "thumbnails": [
+                          {
+                            "url": "https://yt3.googleusercontent.com/-evTfg9Dho5GU39Kw98B-7VuaGHIFSReaafijbIFU6ktxxz4GGtNr1epcGnnvzMTBKiCnjUrNTP1mb-F=w180-h180-l90-rj",
+                            "width": 180,
+                            "height": 180
+                          }
+                        ]
+                      },
+                      "encryptedVideoId": "7mDDM0eBWR0",
+                      "chartEntryMetadata": {
+                        "currentPosition": 1,
+                        "previousPosition": 2,
+                        "percentViewsChange": 0.07124602,
+                        "periodsOnChart": 3
+                      },
+                      "artists": [
+                        {
+                          "kgMid": "/g/11c0p_fr60",
+                          "name": "소연 (SOYEON)"
+                        }
+                      ],
+                      "isVisible": true,
+                      "releaseDate": {
+                        "year": 2026,
+                        "month": 9,
+                        "day": 7
+                      }
+                    },
+                    {
+                      "id": "G:Id5uXDJhL3w",
+                      "name": "new trick",
+                      "viewCount": "3498868",
+                      "thumbnail": {
+                        "thumbnails": [
+                          {
+                            "url": "https://yt3.googleusercontent.com/ZWJ2tHgZ185-1CjBwNEfARprCW7vJaiQWVh7UuLjTlZj_FPHpp4YgwHU7NG3th0iyFGLsuSjG_s0XO4=w180-h180-l90-rj",
+                            "width": 180,
+                            "height": 180
+                          }
+                        ]
+                      },
+                      "encryptedVideoId": "Lufa9QAFFeY",
+                      "chartEntryMetadata": {
+                        "currentPosition": 4,
+                        "periodsOnChart": 1
+                      },
+                      "artists": [
+                        {
+                          "kgMid": "/g/11cs5kzb64",
+                          "name": "로제"
+                        }
+                      ],
+                      "isVisible": true,
+                      "releaseDate": {
+                        "year": 2026,
+                        "month": 9,
+                        "day": 17
+                      }
+                    },
+                    {
+                      "id": "G:QslGu2PSrto",
+                      "name": "아크라포빅",
+                      "viewCount": "798795",
+                      "thumbnail": {
+                        "thumbnails": [
+                          {
+                            "url": "https://yt3.googleusercontent.com/mC-d568OARDWWww1yxIwvShRyspkPC5xvcb4LllKv-FWc5U2J_--1HDFkidMF60hj2iWBUU05Imv5Is=w180-h180-l90-rj",
+                            "width": 180,
+                            "height": 180
+                          }
+                        ]
+                      },
+                      "encryptedVideoId": "sLMK_GYLLE4",
+                      "chartEntryMetadata": {
+                        "currentPosition": 48,
+                        "percentViewsChange": 0.36518615,
+                        "periodsOnChart": 21
+                      },
+                      "artists": [
+                        {
+                          "kgMid": "/g/11sb4td699",
+                          "name": "하모"
+                        }
+                      ],
+                      "isVisible": true,
+                      "releaseDate": {
+                        "year": 2025,
+                        "month": 12,
+                        "day": 13
+                      }
+                    },
+                    {
+                      "id": "G:wBVNGrZre8I",
+                      "name": "생각을 멈추다 보면 ",
+                      "viewCount": "1594391",
+                      "thumbnail": {
+                        "thumbnails": [
+                          {
+                            "url": "https://yt3.googleusercontent.com/geOWWU6dd49YTQ_4O_wMmBkzSORxisB3N6Wg0VlZwCXkvCFOmncUw7x3D3elDsoOLC5y-AKEP26JC_WN=w180-h180-l90-rj",
+                            "width": 180,
+                            "height": 180
+                          }
+                        ]
+                      },
+                      "encryptedVideoId": "to3sjq-CAvA",
+                      "chartEntryMetadata": {
+                        "currentPosition": 22,
+                        "previousPosition": 25,
+                        "percentViewsChange": 0.2196779,
+                        "periodsOnChart": 16
+                      },
+                      "artists": [
+                        {
+                          "kgMid": "/g/11m28msqb9",
+                          "name": "최유리"
+                        },
+                        {
+                          "kgMid": "/m/0116dvgh",
+                          "name": "진영"
+                        }
+                      ],
+                      "isVisible": true,
+                      "releaseDate": {
+                        "year": 2026,
+                        "month": 6,
+                        "day": 2
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
