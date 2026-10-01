@@ -7,6 +7,7 @@ import type { Column } from "@/components/SongTable";
 import YouTubePlayer from "@/components/YouTubePlayer";
 import SongSearch from "@/components/SongSearch";
 import TopChart from "@/components/TopChart";
+import DeleteBoxCard from "@/components/DeleteBoxCard";
 import { Copy, Check, X, Play, Clock } from "lucide-react";
 import type { SongRow } from "@/lib/player";
 import { useJukebox } from "@/hooks/useJukeboxContext";
@@ -163,6 +164,14 @@ export default function PlayPage() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <DeleteBoxCard />
         </motion.div>
       </div>
     </div>

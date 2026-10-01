@@ -53,6 +53,33 @@ export async function updateBox(
   return await response.json();
 }
 
+export interface BoxDeletionResult {
+  deletedSongs: number;
+  deletedFiles: number;
+  failedFiles: number;
+}
+
+/**
+ * Delete a box, the songs no other box uses, and their audio files.
+ * Only the user who created the box may delete it.
+ */
+export async function deleteBox(
+  id: string,
+  userId: string
+): Promise<BoxDeletionResult> {
+  const params = new URLSearchParams({ user_id: userId });
+  const response = await fetch(
+    `${API_HOST}/api/boxes/${encodeURIComponent(id)}?${params}`,
+    { method: "DELETE" }
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Failed to delete box: ${response.status} ${response.statusText}`
+    );
+  }
+  return await response.json();
+}
+
 /**
  * Fetch box-song relationships for a specific box with pagination support.
  */
