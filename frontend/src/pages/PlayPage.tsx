@@ -6,6 +6,7 @@ import { InteractiveSongTable } from "@/components/InteractiveSongTable";
 import type { Column } from "@/components/SongTable";
 import YouTubePlayer from "@/components/YouTubePlayer";
 import SongSearch from "@/components/SongSearch";
+import TopChart from "@/components/TopChart";
 import { Copy, Check, X, Play, Clock } from "lucide-react";
 import type { SongRow } from "@/lib/player";
 import { useJukebox } from "@/hooks/useJukeboxContext";
@@ -130,6 +131,14 @@ export default function PlayPage() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <TopChart onSongSelect={addSong} />
         </motion.div>
 
         <motion.div

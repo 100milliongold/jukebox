@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import SongSearch from "@/components/SongSearch";
+import TopChart from "@/components/TopChart";
 import { SongTable } from "@/components/SongTable";
 import { Check, Clock, Play } from "lucide-react";
 import { useJukebox } from "@/hooks/useJukeboxContext";
@@ -31,6 +32,14 @@ export default function SharePage() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <TopChart onSongSelect={addSong} />
         </motion.div>
 
         <motion.div

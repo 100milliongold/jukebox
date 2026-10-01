@@ -238,6 +238,43 @@ export async function updateBoxSong(
   return await response.json();
 }
 
+export interface ChartEntry {
+  rank: number;
+  previousRank: number | null;
+  periodsOnChart: number;
+  title: string;
+  artist: string;
+  youtubeId: string;
+  viewCount: number;
+  thumbnail: string | null;
+  url: string;
+  /** ISO 8601 duration, "PT0S" when unknown */
+  duration: string;
+}
+
+export interface WeeklyChart {
+  country: string;
+  /** Last day of the charted week (YYYY-MM-DD) */
+  endDate: string | null;
+  fetchedAt: string;
+  /** True when the server could not refresh and serves its last chart */
+  stale: boolean;
+  entries: ChartEntry[];
+}
+
+/**
+ * Get this week's most-viewed songs in Korea from YouTube Charts.
+ */
+export async function getYouTubeCharts(): Promise<WeeklyChart> {
+  const response = await fetch(`${API_HOST}/api/youtube/charts`);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to load YouTube chart: ${response.status} ${response.statusText}`
+    );
+  }
+  return await response.json();
+}
+
 /**
  * Search YouTube for songs.
  */
