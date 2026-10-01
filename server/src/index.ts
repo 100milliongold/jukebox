@@ -15,6 +15,11 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import nodemailer from "nodemailer";
 import { createChartCache, fetchWeeklyChart } from "./youtube-charts";
+import {
+  BoxNotFoundError,
+  NotBoxOwnerError,
+  deleteBoxWithSongs,
+} from "./box-deletion";
 
 // S3 configuration from .env
 const accessKeyId = process.env.S3_ACCESS_KEY_ID;
@@ -792,31 +797,61 @@ app.put("/api/boxes/:id", async (req, res, _next: NextFunction) => {
  *   delete:
  *     tags:
  *       - Boxes
- *     summary: Delete a box by ID or slug
+ *     summary: Delete a box, the songs no other box uses, and their audio
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: user_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Must be the user who created the box
  *     responses:
- *       204:
- *         description: No content (box deleted)
+ *       200:
+ *         description: Box deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 deletedSongs:
+ *                   type: integer
+ *                 deletedFiles:
+ *                   type: integer
+ *                 failedFiles:
+ *                   type: integer
+ *       403:
+ *         description: The user did not create this box
  *       404:
  *         description: Box not found
  */
 app.delete("/api/boxes/:id", async (req, res, _next: NextFunction) => {
   try {
-    const identifier = req.params.id;
-    const deletedRows = await db
-      .deleteFrom("boxes")
-      .where(sql<boolean>`id = ${identifier} OR slug = ${identifier}`)
-      .execute();
-    if (!deletedRows.length) {
-      return void res.status(404).json({ error: "Box not found" });
-    }
-    res.status(204).end();
+    const userId =
+      typeof req.query.user_id === "string" ? req.query.user_id : undefined;
+    const result = await deleteBoxWithSongs({
+      db,
+      boxIdOrSlug: req.params.id,
+      userId,
+      deleteAudio: async (youtubeId) => {
+        await s3.deleteObject({
+          Bucket: S3_BUCKET_NAME,
+          Key: `youtube-audio/${youtubeId}.webm`,
+        });
+      },
+    });
+    res.json(result);
   } catch (error) {
+    if (error instanceof BoxNotFoundError) {
+      return void res.status(404).json({ error: error.message });
+    }
+    if (error instanceof NotBoxOwnerError) {
+      return void res.status(403).json({ error: error.message });
+    }
     res.status(500).json({ error: (error as Error).message });
   }
 });
