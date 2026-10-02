@@ -1,16 +1,41 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Pause, SkipForward, SkipBack, Download } from "lucide-react";
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Download,
+  Shuffle,
+  Repeat,
+  Repeat1,
+} from "lucide-react";
 import { useJukebox } from "@/hooks/useJukeboxContext";
 import { updateBoxSong, getYouTubeAudioSignedUrl } from "@/sdk";
 import type { SongRow } from "@/lib/player";
+import { nextRepeatMode, replaysOnEnd } from "@/lib/playback";
 import { useEqualizer } from "@/hooks/useEqualizer";
 import EqualizerPanel from "@/components/EqualizerPanel";
 import { motion } from "framer-motion";
 
+const REPEAT_TITLES = {
+  off: "Repeat: off",
+  all: "Repeat: all songs",
+  one: "Repeat: this song",
+} as const;
+
 export const YouTubePlayer = () => {
-  const { songs, currentSongIndex, goToPrevious, goToNext } = useJukebox();
+  const {
+    songs,
+    currentSongIndex,
+    goToPrevious,
+    goToNext,
+    hasPrevious,
+    hasNext,
+    playbackMode,
+    setPlaybackMode,
+  } = useJukebox();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -133,7 +158,24 @@ export const YouTubePlayer = () => {
     };
 
     const handleEnded = async () => {
+      if (replaysOnEnd(playbackMode, songs.length)) {
+        // Start the same song over; its row stays "playing".
+        audio.currentTime = 0;
+        audio.play().catch((e) => {
+          console.error("Replay was prevented.", e);
+        });
+        return;
+      }
+
       setIsPlaying(false);
+
+      // goToNext marks this song played, or puts it back to queued when
+      // repeat-all starts the list over.
+      if (hasNext) {
+        goToNext();
+        setCurrentTime(0);
+        return;
+      }
 
       if (currentSong?.id) {
         try {
@@ -143,11 +185,6 @@ export const YouTubePlayer = () => {
         } catch (error) {
           console.error("Failed to update song status to played:", error);
         }
-      }
-
-      if (currentSongIndex < songs.length - 1) {
-        goToNext();
-        setCurrentTime(0);
       }
     };
 
@@ -190,7 +227,14 @@ export const YouTubePlayer = () => {
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("error", handleError);
     };
-  }, [currentSongIndex, songs.length, goToNext, hasInteracted, currentSong]);
+  }, [
+    songs.length,
+    goToNext,
+    hasNext,
+    hasInteracted,
+    currentSong,
+    playbackMode,
+  ]);
 
   const handlePlayPause = useCallback(async () => {
     const audio = audioRef.current;
@@ -417,10 +461,27 @@ export const YouTubePlayer = () => {
                   {/* Player Controls */}
                   <div className="flex items-center justify-center gap-4 mt-4">
                     <Button
+                      variant={playbackMode.shuffle ? "default" : "neutral"}
+                      size="sm"
+                      onClick={() =>
+                        setPlaybackMode((mode) => ({
+                          ...mode,
+                          shuffle: !mode.shuffle,
+                        }))
+                      }
+                      aria-pressed={playbackMode.shuffle}
+                      aria-label="Shuffle"
+                      title={
+                        playbackMode.shuffle ? "Shuffle: on" : "Shuffle: off"
+                      }
+                    >
+                      <Shuffle className="h-4 w-4" />
+                    </Button>
+                    <Button
                       variant="neutral"
                       size="sm"
                       onClick={goToPrevious}
-                      disabled={currentSongIndex === 0}
+                      disabled={!hasPrevious}
                     >
                       <SkipBack className="h-4 w-4" />
                     </Button>
@@ -441,9 +502,30 @@ export const YouTubePlayer = () => {
                       variant="neutral"
                       size="sm"
                       onClick={goToNext}
-                      disabled={currentSongIndex === songs.length - 1}
+                      disabled={!hasNext}
                     >
                       <SkipForward className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={
+                        playbackMode.repeat === "off" ? "neutral" : "default"
+                      }
+                      size="sm"
+                      onClick={() =>
+                        setPlaybackMode((mode) => ({
+                          ...mode,
+                          repeat: nextRepeatMode(mode.repeat),
+                        }))
+                      }
+                      aria-pressed={playbackMode.repeat !== "off"}
+                      aria-label="Repeat"
+                      title={REPEAT_TITLES[playbackMode.repeat]}
+                    >
+                      {playbackMode.repeat === "one" ? (
+                        <Repeat1 className="h-4 w-4" />
+                      ) : (
+                        <Repeat className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                   {/* Playlist Info */}
