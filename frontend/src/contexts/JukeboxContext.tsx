@@ -20,12 +20,28 @@ import {
   updateUser as updateUserSDK,
 } from "@/sdk";
 import { usePlayerSongs, type SongRow, type PlayerSong } from "@/lib/player";
+import {
+  loadPlaybackMode,
+  pickNext,
+  pickPrevious,
+  pushHistory,
+  savePlaybackMode,
+  type PlaybackMode,
+} from "@/lib/playback";
 import { JukeboxContext } from "@/hooks/useJukeboxContext";
 import fingerprintjs from "@fingerprintjs/fingerprintjs";
 import { usernames } from "@/assets/cool-names";
 
 type Box = components["schemas"]["Box"];
 type User = components["schemas"]["User"];
+
+function getStorage(): Storage | undefined {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
 
 export interface JukeboxContextValue {
   box?: Box;
@@ -58,6 +74,9 @@ export interface JukeboxContextValue {
   hasPrevious: boolean;
   /** Check if there is a next song available */
   hasNext: boolean;
+  /** Shuffle and repeat settings for this browser */
+  playbackMode: PlaybackMode;
+  setPlaybackMode: Dispatch<SetStateAction<PlaybackMode>>;
   user?: User;
 }
 
@@ -77,6 +96,16 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
   const [page, setPage] = useState(0);
   const [fingerprint, setFingerprint] = useState<string | undefined>();
   const [user, setUser] = useState<User | undefined>();
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(() =>
+    loadPlaybackMode(getStorage())
+  );
+  // Songs played in this session, so the previous button can step back
+  // through a shuffled order.
+  const [history, setHistory] = useState<string[]>([]);
+
+  useEffect(() => {
+    savePlaybackMode(getStorage(), playbackMode);
+  }, [playbackMode]);
 
   const fetchBox = useCallback(async () => {
     if (!boxSlug) return;
@@ -356,44 +385,81 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
+  // Mark the row played here as well as on the server, so shuffle does not
+  // pick a song skipped moments ago before the next refetch.
+  const markPlayed = useCallback((id: string) => {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === id && row.status !== "played"
+          ? { ...row, status: "played" }
+          : row
+      )
+    );
+    updateBoxSong(id, { status: "played" }).catch((error) => {
+      console.error("Failed to update song status to played:", error);
+    });
+  }, []);
+
   // Navigation functions for previous/next songs
   const goToPrevious = useCallback(() => {
+    const choice = pickPrevious(songs, currentSongIndex, playbackMode, history);
+    if (!choice) return;
     const currentSong = songs[currentSongIndex];
-    if (currentSong) {
-      try {
-        updateBoxSong(currentSong.id, {
-          status: "played",
-        });
-      } catch (error) {
-        console.error("Failed to update song status to played:", error);
-      }
-    }
-    const previousSong = songs[currentSongIndex - 1];
+    if (currentSong) markPlayed(currentSong.id);
+    const previousSong = songs[choice.index];
     if (previousSong) {
+      setHistory(choice.history);
       setCurrentSongId(previousSong.id);
     }
-  }, [songs, currentSongIndex]);
+  }, [songs, currentSongIndex, playbackMode, history, markPlayed]);
+
+  // Repeat-all starts the list over: every row waits again, so songs added
+  // from now on are placed among them as on a first pass instead of after
+  // the whole list.
+  const restartPlaylist = useCallback(
+    (nextSongId: string) => {
+      const toReset = rows.filter(
+        (row) => row.id !== nextSongId && row.status !== "queued"
+      );
+      setRows((prev) =>
+        prev.map((row) =>
+          row.id === nextSongId || row.status === "queued"
+            ? row
+            : { ...row, status: "queued" }
+        )
+      );
+      Promise.all(
+        toReset.map((row) => updateBoxSong(row.id, { status: "queued" }))
+      ).catch((error) => {
+        console.error("Failed to set songs back to queued:", error);
+      });
+    },
+    [rows]
+  );
 
   const goToNext = useCallback(() => {
+    const choice = pickNext(songs, currentSongIndex, playbackMode);
+    if (!choice) return;
     const currentSong = songs[currentSongIndex];
+    const nextSong = songs[choice.index];
+    if (!nextSong) return;
+    if (choice.restart) {
+      // The current song goes back to queued with the rest, so it is not
+      // marked played here.
+      restartPlaylist(nextSong.id);
+    } else if (currentSong) {
+      markPlayed(currentSong.id);
+    }
     if (currentSong) {
-      try {
-        updateBoxSong(currentSong.id, {
-          status: "played",
-        });
-      } catch (error) {
-        console.error("Failed to update song status to played:", error);
-      }
+      setHistory((prev) => pushHistory(prev, currentSong.id));
     }
-    const nextSong = songs[currentSongIndex + 1];
-    if (nextSong) {
-      setCurrentSongId(nextSong.id);
-    }
-  }, [currentSongIndex, songs]);
+    setCurrentSongId(nextSong.id);
+  }, [currentSongIndex, songs, playbackMode, restartPlaylist, markPlayed]);
 
   // Helper properties to check if navigation is available
-  const hasPrevious = currentSongIndex > 0;
-  const hasNext = currentSongIndex < songs.length - 1;
+  const hasPrevious =
+    pickPrevious(songs, currentSongIndex, playbackMode, history) !== null;
+  const hasNext = pickNext(songs, currentSongIndex, playbackMode) !== null;
 
   // Expose context value
   return (
@@ -414,6 +480,8 @@ export function JukeboxProvider({ children }: { children: ReactNode }) {
         goToNext,
         hasPrevious,
         hasNext,
+        playbackMode,
+        setPlaybackMode,
         user,
         updateUser,
       }}
